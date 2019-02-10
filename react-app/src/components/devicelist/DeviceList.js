@@ -12,8 +12,7 @@ import axios from 'axios';
 const styles = {
     root: {
       width: '100%',
-      marginTop: 10,
-      overflowX: 'auto',
+      marginTop: 10
     },
     table: {
       maxWidth: '90%',
