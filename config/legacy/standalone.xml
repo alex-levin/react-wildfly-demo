@@ -65,6 +65,11 @@
                     <properties path="application-roles.properties" relative-to="jboss.server.config.dir"/>
                 </authorization>
             </security-realm>
+			<security-realm name="exampleDbRealm">
+				<authentication>
+					<jaas name="exampleDbSD"/>
+				</authentication>
+			</security-realm>
         </security-realms>
         <audit-log>
             <formatters>
@@ -98,7 +103,7 @@
     <profile>
         <subsystem xmlns="urn:jboss:domain:logging:6.0">
             <console-handler name="CONSOLE">
-                <level name="ALL"/>
+                <level name="INFO"/>
                 <formatter>
                     <named-formatter name="COLOR-PATTERN"/>
                 </formatter>
@@ -122,24 +127,6 @@
             </logger>
             <logger category="sun.rmi">
                 <level name="WARN"/>
-            </logger>
-            <logger category="org.jboss.security">
-                <level name="ALL"/>
-            </logger>
-            <logger category="org.jboss.as.security">
-                <level name="ALL"/>
-            </logger>
-            <logger category="org.picketbox">
-                <level name="ALL"/>
-            </logger>
-            <logger category="org.jboss.as.domain.management.security">
-                <level name="ALL"/>
-            </logger>
-            <logger category="org.wildfly.security">
-                <level name="ALL"/>
-            </logger>
-            <logger category="org.wildfly.elytron">
-                <level name="ALL"/>
             </logger>
             <root-logger>
                 <level name="INFO"/>
@@ -260,13 +247,10 @@
                 </thread-pool>
             </thread-pools>
             <iiop enable-by-default="false" use-qualified-name="false"/>
-            <default-security-domain value="other"/>
-            <application-security-domains>
-                <application-security-domain name="exampleDbSD" security-domain="ApplicationDomain"/>
-            </application-security-domains>
-            <default-missing-method-permissions-deny-access value="true"/>
+            <!-- <default-security-domain value="other"/> -->
+            <default-missing-method-permissions-deny-access value="false"/>
             <statistics enabled="${wildfly.ejb3.statistics-enabled:${wildfly.statistics-enabled:false}}"/>
-            <log-system-exceptions value="true"/>
+            <log-system-exceptions value="true"/>	
         </subsystem>
         <subsystem xmlns="urn:wildfly:elytron:6.0" final-providers="combined-providers" disallowed-providers="OracleUcrypto">
             <providers>
@@ -289,22 +273,9 @@
                     <realm name="ManagementRealm" role-decoder="groups-to-roles"/>
                     <realm name="local" role-mapper="super-user-mapper"/>
                 </security-domain>
-                <security-domain name="exampleDbSD" default-realm="jdbc-realm" permission-mapper="default-permission-mapper">
-                    <realm name="jdbc-realm" role-decoder="from-roles-attribute"/>
-                </security-domain>
             </security-domains>
             <security-realms>
                 <identity-realm name="local" identity="$local"/>
-                <jdbc-realm name="jdbc-realm">
-                    <principal-query sql="SELECT PASSWORD FROM USERTBL WHERE USERNAME = ?" data-source="examplePostgresDS">
-                        <clear-password-mapper password-index="1"/>
-                    </principal-query>
-                    <principal-query sql="SELECT R.ROLENAME from ROLE AS R, USERROLE AS UR, USER AS U WHERE U.USERNAME=? AND UR.ROLEID = R.ID AND UR.USERID = U.ID" data-source="examplePostgresDS">
-                        <attribute-mapping>
-                            <attribute to="roles" index="1"/>
-                        </attribute-mapping>
-                    </principal-query>
-                </jdbc-realm>
                 <properties-realm name="ApplicationRealm">
                     <users-properties path="application-users.properties" relative-to="jboss.server.config.dir" digest-realm-name="ApplicationRealm"/>
                     <groups-properties path="application-roles.properties" relative-to="jboss.server.config.dir"/>
@@ -327,7 +298,6 @@
                 </simple-permission-mapper>
                 <constant-realm-mapper name="local" realm-name="local"/>
                 <simple-role-decoder name="groups-to-roles" attribute="groups"/>
-                <simple-role-decoder name="from-roles-attribute" attribute="roles"/>
                 <constant-role-mapper name="super-user-mapper">
                     <role name="SuperUser"/>
                 </constant-role-mapper>
@@ -347,13 +317,6 @@
                     <mechanism-configuration>
                         <mechanism mechanism-name="DIGEST">
                             <mechanism-realm realm-name="ManagementRealm"/>
-                        </mechanism>
-                    </mechanism-configuration>
-                </http-authentication-factory>
-                <http-authentication-factory name="exampleDb-http-authentication" security-domain="exampleDbSD" http-server-mechanism-factory="global">
-                    <mechanism-configuration>
-                        <mechanism mechanism-name="FORM">
-                            <mechanism-realm realm-name="jdbc-realm"/>
                         </mechanism>
                     </mechanism-configuration>
                 </http-authentication-factory>
@@ -539,6 +502,27 @@
                         <policy-module code="Delegating" flag="required"/>
                     </authorization>
                 </security-domain>
+				
+				<security-domain name="exampleDbSD" cache-type="default">
+				  <authentication>
+					  <login-module code="Database" flag="required">
+						  <module-option name="dsJndiName" value="java:jboss/examplePostgresDS"/>
+						  <module-option name="rolesQuery" value="SELECT roles, 'Roles' FROM users WHERE username=?"/>
+						  <module-option name="principalsQuery" value="SELECT password from users WHERE username=?"/>
+						  <module-option name="hashAlgorithm" value="SHA-256"/>
+						  <module-option name="hashEncoding" value="base64"/>
+					  </login-module>
+				  </authentication>
+				  <authorization>
+					  <policy-module code="Database" flag="required">
+						  <module-option name="dsJndiName" value="java:jboss/examplePostgresDS"/>
+						  <module-option name="rolesQuery" value="SELECT roles, 'Roles' FROM users WHERE username=?"/>
+						  <module-option name="principalsQuery" value="SELECT password from users WHERE username=?"/>
+						  <module-option name="hashAlgorithm" value="SHA-256"/>
+						  <module-option name="hashEncoding" value="base64"/>
+					  </policy-module>
+				  </authorization>
+				</security-domain>
             </security-domains>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:security-manager:1.0">
@@ -558,7 +542,7 @@
             <coordinator-environment statistics-enabled="${wildfly.transactions.statistics-enabled:${wildfly.statistics-enabled:false}}"/>
             <object-store path="tx-object-store" relative-to="jboss.server.data.dir"/>
         </subsystem>
-        <subsystem xmlns="urn:jboss:domain:undertow:8.0" default-server="default-server" default-virtual-host="default-host" default-servlet-container="default" default-security-domain="other" statistics-enabled="${wildfly.undertow.statistics-enabled:${wildfly.statistics-enabled:false}}">
+        <subsystem xmlns="urn:jboss:domain:undertow:8.0" default-server="default-server" default-virtual-host="default-host" default-servlet-container="default" default-security-domain="exampleDbSD" statistics-enabled="${wildfly.undertow.statistics-enabled:${wildfly.statistics-enabled:false}}">
             <buffer-cache name="default"/>
             <server name="default-server">
                 <http-listener name="default" socket-binding="http" redirect-socket="https" enable-http2="true"/>
@@ -574,10 +558,7 @@
             </servlet-container>
             <handlers>
                 <file name="welcome-content" path="${jboss.home.dir}/welcome-content"/>
-            </handlers>
-            <application-security-domains>
-                <application-security-domain name="exampleDbSD" security-domain="ApplicationDomain"/>
-            </application-security-domains>
+            </handlers>				
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:webservices:2.0" statistics-enabled="${wildfly.webservices.statistics-enabled:${wildfly.statistics-enabled:false}}">
             <wsdl-host>${jboss.bind.address:127.0.0.1}</wsdl-host>

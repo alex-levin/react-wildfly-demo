@@ -8,3 +8,9 @@ PRIMARY KEY (id)
 
 insert into users(id,username,password,roles) values(1,'admin','password','Admin');
 insert into users(id,username,password,roles) values(2,'admin','password','User');
+
+Added to standalone.xml:
+<module-option name="hashAlgorithm" value="SHA-256"/>
+<module-option name="hashEncoding" value="base64"/>
+
+Need to hash the 'password' in the database.
