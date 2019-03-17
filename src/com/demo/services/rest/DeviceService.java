@@ -3,6 +3,11 @@ package com.demo.services.rest;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+import javax.annotation.security.RolesAllowed;
+import javax.ejb.EJB;
+import javax.ejb.SessionContext;
 import javax.ejb.Stateless;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -10,11 +15,23 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import com.demo.model.DeviceEntity;
+import com.demo.services.DeviceServiceBean;
 
 // http://docs.jboss.org/resteasy/docs/3.6.2.Final/userguide/html_single/#RESTEasy_EJB_Integration
 @Stateless
 @Path("/device")
 public class DeviceService {
+	
+	@Resource 
+	private SessionContext ctx;
+	
+	@EJB
+	private DeviceServiceBean deviceService;
+	
+	@PostConstruct
+	public void init() {
+		
+	}
 
 	/**
 		Test
@@ -28,9 +45,8 @@ public class DeviceService {
 	@Path("/devicelist")
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<DeviceEntity> getDevices() {
-		DeviceEntity device1 = new DeviceEntity("A111", "127.0.1.1", "beretta", "123");
-		DeviceEntity device2 = new DeviceEntity("A222", "127.0.1.4", "glock", "124");
-		DeviceEntity device3 = new DeviceEntity("A333", "127.0.1.3", "ruger", "125");
-		return Arrays.asList(device1, device2, device3);
+		List<DeviceEntity> devices = deviceService.getDevices();
+		
+		return devices;
 	}
 }
