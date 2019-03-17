@@ -1,0 +1,10 @@
+CREATE TABLE Users (
+id INTEGER NOT NULL,
+username VARCHAR(255),
+password VARCHAR(255),
+roles VARCHAR(255),
+PRIMARY KEY (id)
+)
+
+insert into users(id,username,password,roles) values(1,'admin','password','Admin');
+insert into users(id,username,password,roles) values(2,'admin','password','User');

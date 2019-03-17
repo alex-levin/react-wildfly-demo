@@ -1,0 +1,108 @@
+CREATE TABLE Usertbl (
+id BIGINT NOT NULL,
+username VARCHAR(255),
+password VARCHAR(255),
+PRIMARY KEY (id),
+UNIQUE (username)
+)
+
+CREATE TABLE Role(
+id BIGINT NOT NULL,
+rolename VARCHAR(255),
+PRIMARY KEY (id),
+UNIQUE (rolename)
+)
+
+CREATE TABLE Userrole(
+userid BIGINT not null references Usertbl(id),
+roleid BIGINT not null references Role(id),
+PRIMARY KEY (userid, roleid)
+)
+
+insert into Usertbl(id,username,password) values(1,'admin','password'); 
+insert into Usertbl(id,username,password) values(2,'user','password');
+insert into Role(id,rolename) values(1,'Admin');
+insert into Role(id,rolename) values(2,'User');
+insert into Userrole(userid,roleid) values(1,1);
+insert into Userrole(userid,roleid) values(2,2);
+
+/subsystem=logging/logger=org.jboss.security:add(level=ALL)
+/subsystem=logging/logger=org.jboss.as.security:add(level=ALL)
+/subsystem=logging/logger=org.picketbox:add(level=ALL)
+/subsystem=logging/logger=org.jboss.as.domain.management.security:add(level=ALL)
+/subsystem=logging/logger=org.wildfly.security:add(level=ALL)
+/subsystem=logging/logger=org.wildfly.elytron:add(level=ALL)
+/subsystem=logging/console-handler=CONSOLE:write-attribute(name=level, value=ALL)
+
+Start WildFly.
+C:\tools\wildfly-16.0.0.Final\bin>jboss-cli.bat
+You are disconnected at the moment. Type 'connect' to connect to the server or 'help' for the list of supported commands.
+[disconnected /] connect
+[standalone@localhost:9990 /]
+
+[standalone@localhost:9990 /] deploy C:/Users/alxle/Downloads/postgresql-42.2.5.jar
+
+data-source add --name=examplePostgresDS --jndi-name=java:jboss/examplePostgresDS --driver-name=postgresql-42.2.5.jar  --connection-url=jdbc:postgresql://localhost:5432/postgresdb --user-name=postgres --password=Proxypass14...
+
+
+                <datasource jndi-name="java:jboss/examplePostgresDS" pool-name="examplePostgresDS">
+                    <connection-url>jdbc:postgresql://localhost:5432/postgresdb</connection-url>
+                    <driver>postgresql-42.2.5.jar</driver>
+                    <security>
+                        <user-name>postgres</user-name>
+                        <password>Proxypass14...</password>
+                    </security>
+                </datasource>
+				
+				
+using simple-digest-sha-1 or simple-digest-sha-256
+./subsystem=elytron/jdbc-realm=jdbc-realm:add(principal-query=[{data-source=examplePostgresDS, sql="SELECT role, password FROM User WHERE username = ?", attribute-mapping=[{index=1, to=Roles}] simple-digest-mapper={algorithm=simple-digest-sha-256, password-index=2}}])				
+				
+standalone.xml: add jdbc-realm
+<subsystem xmlns="urn:wildfly:elytron:6.0" final-providers="combined-providers" disallowed-providers="OracleUcrypto">
+	...
+	<security-realms>
+		<identity-realm name="local" identity="$local"/>
+		<jdbc-realm name="jdbc-realm">
+			<principal-query sql="SELECT PASSWORD FROM USER WHERE USERNAME = ?" data-source="examplePostgresDS">
+				<simple-digest-mapper algorithm="simple-digest-sha-256" password-index="1"/>
+			</principal-query>
+			<principal-query sql="SELECT R.ROLENAME from ROLE AS R, USERROLE AS UR, USER AS U WHERE U.USERNAME=? AND UR.ROLEID = R.ID AND UR.USERID = U.ID" data-source="examplePostgresDS">
+				<attribute-mapping>
+					<attribute to="roles" index="1"/>
+				</attribute-mapping>
+			</principal-query>					
+		</jdbc-realm>
+	</security-realms>
+
+<mappers>
+	...
+	<simple-role-decoder name="from-roles-attribute" attribute="roles"/>
+</mappers>
+
+<security-domains>
+	...
+	<security-domain name="exampleDbSD" default-realm="jdbc-realm" permission-mapper="default-permission-mapper">
+		<realm name="jdbc-realm" role-decoder="from-roles-attribute"/>
+	</security-domain>
+</security-domains>
+
+/subsystem=elytron/http-authentication-factory=example-db-http-auth:add(http-server-mechanism-factory=global,security-domain=exampleDbSD,mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=exampleDbSD}]}])
+
+<subsystem xmlns="urn:jboss:domain:ejb3:5.0">  
+...  
+    <application-security-domains>  
+        <application-security-domain name="exampleDbSD" security-domain="ApplicationDomain"/>  
+    </application-security-domains>  
+...  
+</subsystem> 
+
+/subsystem=undertow/application-security-domain=exampleDbSD:add(http-authentication-factory=application-http-authentication)
+
+<http-authentication-factory name="security-domain-to-domain-http" security-domain="entry-security-domain" http-server-mechanism-factory="global">
+    <mechanism-configuration>
+        <mechanism mechanism-name="FORM">
+            <mechanism-realm realm-name="jdbc-realm"/>
+        </mechanism>
+    </mechanism-configuration>
+</http-authentication-factory>
