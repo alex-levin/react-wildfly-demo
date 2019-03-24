@@ -6,8 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Resource;
-import javax.annotation.security.DeclareRoles;
-import javax.annotation.security.PermitAll;
+import javax.annotation.security.RolesAllowed;
 import javax.ejb.SessionContext;
 import javax.ejb.Stateless;
 
@@ -16,10 +15,8 @@ import org.jboss.ejb3.annotation.SecurityDomain;
 import com.demo.model.DeviceEntity;
 
 @Stateless
-//@DeclareRoles({"Admin", "User"})
 @SecurityDomain("exampleDbSD")  
-//@RolesAllowed({"Admin","User"})
-//@PermitAll
+@RolesAllowed({"Admin","User"})
 public class DeviceServiceBean {
 
 	@Resource
@@ -33,6 +30,8 @@ public class DeviceServiceBean {
 
 		boolean isAdmin = ctx.isCallerInRole("Admin");
 		System.out.println("isAdmin:" + isAdmin);
+		boolean isUser = ctx.isCallerInRole("User");
+		System.out.println("isUser:" + isUser);
 		
 		String securityInfo = getSecurityInfo();
 		System.out.println("SecurityInfo:" + securityInfo);

@@ -14,8 +14,8 @@
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container"/>
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
-	<classpathentry kind="lib" path="C:/tools/wildfly-15.0.1.Final/modules/system/layers/base/com/fasterxml/jackson/core/jackson-annotations/main/jackson-annotations-2.9.5.jar"/>
-	<classpathentry kind="lib" path="C:/tools/wildfly-15.0.1.Final/modules/system/layers/base/com/fasterxml/jackson/core/jackson-core/main/jackson-core-2.9.5.jar"/>
-	<classpathentry kind="lib" path="C:/tools/wildfly-15.0.1.Final/modules/system/layers/base/com/fasterxml/jackson/core/jackson-databind/main/jackson-databind-2.9.5.jar"/>
+	<classpathentry kind="var" path="JBOSS_HOME/modules/system/layers/base/com/fasterxml/jackson/core/jackson-annotations/main/jackson-annotations-2.9.8.jar"/>
+	<classpathentry kind="var" path="JBOSS_HOME/modules/system/layers/base/com/fasterxml/jackson/core/jackson-core/main/jackson-core-2.9.8.jar"/>
+	<classpathentry kind="var" path="JBOSS_HOME/modules/system/layers/base/com/fasterxml/jackson/core/jackson-databind/main/jackson-databind-2.9.8.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>
